@@ -1,10 +1,15 @@
-import { createSlice, nanoid, PayloadAction } from '@reduxjs/toolkit';
+import {
+  createAsyncThunk,
+  createSlice,
+  nanoid,
+  PayloadAction,
+} from '@reduxjs/toolkit';
 
-import data from '../api/data.json';
 import { removeUser } from './users-slice';
 
 export type TasksState = {
   entities: Task[];
+  loading?: boolean;
 };
 
 type DraftTask = RequireOnly<Task, 'title'>;
@@ -14,8 +19,17 @@ export const createTask = (draftTask: DraftTask): Task => {
 };
 
 const initialState: TasksState = {
-  entities: data.tasks,
+  entities: [],
+  loading: false,
 };
+
+export const fetchTasks = createAsyncThunk(
+  'tasks/fetch',
+  async function (): Promise<Task[]> {
+    const resp = await fetch('/api/tasks').then((res) => res.json());
+    return resp.tasks;
+  },
+);
 
 const tasksSlice = createSlice({
   name: 'tasks',
@@ -40,6 +54,15 @@ const tasksSlice = createSlice({
           task.user = undefined;
         }
       }
+    });
+
+    builder.addCase(fetchTasks.pending, (state) => {
+      state.loading = true;
+    });
+
+    builder.addCase(fetchTasks.fulfilled, (state, action) => {
+      state.entities = action.payload;
+      state.loading = false;
     });
   },
 });
